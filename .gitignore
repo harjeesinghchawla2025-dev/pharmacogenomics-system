@@ -33,4 +33,6 @@ database/raw/
 node_modules/
 
 # Build output
-dist/
+dist/uploads/
+
+uploads/

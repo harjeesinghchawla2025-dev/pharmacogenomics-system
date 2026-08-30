@@ -454,3 +454,105 @@ CREATE TABLE Reports (
         ON DELETE SET NULL
         ON UPDATE CASCADE
 );
+
+-- ============================================
+-- 21. GUIDELINE RAW IMPORT
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline_raw (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pharmgkb_id VARCHAR(100),
+    json_data LONGTEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- 22. GUIDELINE PROCESSED
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline (
+    guideline_id INT AUTO_INCREMENT PRIMARY KEY,
+    pharmgkb_id VARCHAR(100),
+    guideline_name TEXT,
+    source VARCHAR(100),
+    alternate_drug_available TINYINT(1),
+    cancer_genome TINYINT(1),
+    dosing_information TINYINT(1),
+    has_testing_info TINYINT(1),
+    other_prescribing_guidance TINYINT(1),
+    pediatric TINYINT(1),
+    recommendation TINYINT(1),
+    summary_markdown LONGTEXT,
+    text_markdown LONGTEXT,
+    version INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- 23. GUIDELINE GENE MAPPING
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline_gene (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guideline_id INT,
+    pharmgkb_gene_id VARCHAR(100),
+    gene_symbol VARCHAR(50),
+    gene_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guideline_gene_guideline
+        FOREIGN KEY (guideline_id)
+        REFERENCES guideline(guideline_id)
+        ON DELETE CASCADE
+);
+
+-- ============================================
+-- 24. GUIDELINE DRUG MAPPING
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline_drug (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guideline_id INT,
+    pharmgkb_drug_id VARCHAR(100),
+    drug_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guideline_drug_guideline
+        FOREIGN KEY (guideline_id)
+        REFERENCES guideline(guideline_id)
+        ON DELETE CASCADE
+);
+
+-- ============================================
+-- 25. GUIDELINE LITERATURE
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline_literature (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guideline_id INT,
+    literature_id INT,
+    title TEXT,
+    pub_date DATE,
+    literature_type VARCHAR(100),
+    cross_references JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guideline_literature_guideline
+        FOREIGN KEY (guideline_id)
+        REFERENCES guideline(guideline_id)
+        ON DELETE CASCADE
+);
+
+-- ============================================
+-- 26. GUIDELINE VARIANT
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS guideline_variant (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guideline_id INT,
+    pharmgkb_variant_id VARCHAR(100),
+    variant_symbol VARCHAR(100),
+    variant_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guideline_variant_guideline
+        FOREIGN KEY (guideline_id)
+        REFERENCES guideline(guideline_id)
+        ON DELETE CASCADE
+);
