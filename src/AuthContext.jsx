@@ -1,4 +1,4 @@
-```jsx
+
 import { createContext, useContext, useState } from "react";
 import { apiRequest } from "./api.js";
 
@@ -60,4 +60,4 @@ export function useAuth() {
 
   return context;
 }
-```
+
