@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import pool from "./db.js";
 import adminRoutes from "./routes/admin.js";
 import patientRoutes from "./routes/patient.js";
+import authRoutes from "./routes/auth.js";
+import profileRoutes from "./routes/profile.js";
+
 
 dotenv.config();
 
@@ -19,6 +22,9 @@ app.use(express.json());
 
 app.use("/admin", adminRoutes);
 app.use("/api", patientRoutes);
+
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.get("/api/test-db", async (req, res) => {
   try {
