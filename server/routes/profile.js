@@ -1,149 +1,204 @@
 
-import { Router } from "express";
-import pool from "../db.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiRequest } from "../api.js";
+import { useAuth } from "../AuthContext.jsx";
+import "../auth.css";
 
-const router = Router();
+const emptyProfile = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  dateOfBirth: "",
+  gender: "",
+  address: "",
+  email: "",
+  studentId: "",
+  role: "",
+};
 
-// GET: View the logged-in user's profile
-router.get("/", authenticateToken, async (req, res) => {
-  try {
-    const [rows] = await pool.execute(
-      `SELECT
-         u.user_id,
-         u.email,
-         u.student_id,
-         u.account_status,
-         r.role_name,
-         p.first_name,
-         p.last_name,
-         p.phone,
-         p.date_of_birth,
-         p.gender,
-         p.address
-       FROM Users u
-       JOIN Roles r ON r.role_id = u.role_id
-       LEFT JOIN User_Profile p ON p.user_id = u.user_id
-       WHERE u.user_id = ?`,
-      [req.user.userId]
-    );
+export default function Profile() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-    if (!rows.length) {
-      return res.status(404).json({
-        message: "Profile not found.",
-      });
+  const [profile, setProfile] = useState(emptyProfile);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await apiRequest("/profile");
+        const record = data.user;
+
+        if (!record) {
+          throw new Error("Profile data was not returned by the server.");
+        }
+
+        setProfile({
+          firstName: record.first_name || "",
+          lastName: record.last_name || "",
+          phone: record.phone || "",
+          dateOfBirth: record.date_of_birth
+            ? String(record.date_of_birth).slice(0, 10)
+            : "",
+          gender: record.gender || "",
+          address: record.address || "",
+          email: record.email || "",
+          studentId: record.student_id || "",
+          role: record.role_name || "",
+        });
+      } catch (err) {
+        setError(err.message || "Could not load your profile.");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    res.json({ user: rows[0] });
-  } catch (error) {
-    console.error("Profile error:", error.message);
+    loadProfile();
+  }, []);
 
-    res.status(500).json({
-      message: "Could not load profile.",
-    });
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setProfile((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   }
-});
 
-// PUT: Update the logged-in user's profile
-router.put("/", authenticateToken, async (req, res) => {
-  try {
-    const {
-      firstName,
-      lastName = "",
-      phone = "",
-      dateOfBirth = null,
-      gender = null,
-      address = "",
-    } = req.body;
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setSaving(true);
 
-    if (
-      typeof firstName !== "string" ||
-      !firstName.trim() ||
-      firstName.trim().length > 50 ||
-      typeof lastName !== "string" ||
-      lastName.length > 50 ||
-      typeof phone !== "string" ||
-      phone.length > 20 ||
-      typeof address !== "string" ||
-      address.length > 255
-    ) {
-      return res.status(400).json({
-        message: "Please enter valid profile details.",
+    try {
+      const data = await apiRequest("/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          dateOfBirth: profile.dateOfBirth || null,
+          gender: profile.gender || null,
+          address: profile.address,
+        }),
       });
+
+      setMessage(data.message || "Profile updated successfully!");
+    } catch (err) {
+      setError(err.message || "Could not update your profile.");
+    } finally {
+      setSaving(false);
     }
-
-    if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) {
-      return res.status(400).json({
-        message: "Enter a valid phone number.",
-      });
-    }
-
-    const allowedGenders = [
-      null,
-      "Male",
-      "Female",
-      "Other",
-      "Prefer not to say",
-    ];
-
-    if (!allowedGenders.includes(gender)) {
-      return res.status(400).json({
-        message: "Invalid gender selection.",
-      });
-    }
-
-    if (
-      dateOfBirth !== null &&
-      (
-        typeof dateOfBirth !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) ||
-        Number.isNaN(Date.parse(dateOfBirth)) ||
-        new Date(dateOfBirth).toISOString().slice(0, 10) !== dateOfBirth ||
-        dateOfBirth > new Date().toISOString().slice(0, 10)
-      )
-    ) {
-      return res.status(400).json({
-        message: "Enter a valid date of birth.",
-      });
-    }
-
-    const [result] = await pool.execute(
-      `UPDATE User_Profile
-       SET first_name = ?,
-           last_name = ?,
-           phone = ?,
-           date_of_birth = ?,
-           gender = ?,
-           address = ?
-       WHERE user_id = ?`,
-      [
-        firstName.trim(),
-        lastName.trim() || null,
-        phone.trim() || null,
-        dateOfBirth,
-        gender,
-        address.trim() || null,
-        req.user.userId,
-      ]
-    );
-
-    if (!result.affectedRows) {
-      return res.status(404).json({
-        message: "Profile not found.",
-      });
-    }
-
-    res.json({
-      message: "Profile updated successfully.",
-    });
-  } catch (error) {
-    console.error("Profile update error:", error.message);
-
-    res.status(500).json({
-      message: "Could not update profile.",
-    });
   }
-});
 
-export default router;
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
+  if (loading) {
+    return <div className="auth-page">Loading your profile...</div>;
+  }
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h1>My Profile</h1>
+        <p>View and update your account information.</p>
+
+        {error && <div className="auth-error">{error}</div>}
+        {message && <div className="auth-success">{message}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="email">Email Address</label>
+          <input id="email" value={profile.email} disabled />
+
+          <label htmlFor="studentId">Student ID</label>
+          <input id="studentId" value={profile.studentId} disabled />
+
+          <label htmlFor="role">Role</label>
+          <input id="role" value={profile.role || user?.role || ""} disabled />
+
+          <label htmlFor="firstName">First Name</label>
+          <input
+            id="firstName"
+            name="firstName"
+            value={profile.firstName}
+            onChange={handleChange}
+            maxLength={50}
+            required
+          />
+
+          <label htmlFor="lastName">Last Name</label>
+          <input
+            id="lastName"
+            name="lastName"
+            value={profile.lastName}
+            onChange={handleChange}
+            maxLength={50}
+          />
+
+          <label htmlFor="phone">Phone Number</label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={profile.phone}
+            onChange={handleChange}
+            maxLength={20}
+          />
+
+          <label htmlFor="dateOfBirth">Date of Birth</label>
+          <input
+            id="dateOfBirth"
+            name="dateOfBirth"
+            type="date"
+            value={profile.dateOfBirth}
+            onChange={handleChange}
+          />
+
+          <label htmlFor="gender">Gender</label>
+          <select
+            id="gender"
+            name="gender"
+            value={profile.gender}
+            onChange={handleChange}
+          >
+            <option value="">Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+
+          <label htmlFor="address">Address</label>
+          <textarea
+            id="address"
+            name="address"
+            value={profile.address}
+            onChange={handleChange}
+            maxLength={255}
+            rows={3}
+          />
+
+          <button type="submit" disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={handleLogout}
+        >
+          Log Out
+        </button>
+      </div>
+    </div>
+  );
+}
