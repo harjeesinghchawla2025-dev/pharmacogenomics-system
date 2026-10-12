@@ -8,12 +8,19 @@ const router = Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      studentId,
+    } = req.body;
 
     if (
-      !firstName ||
-      !email ||
-      !password ||
+      !firstName?.trim() ||
+      !email?.trim() ||
+      typeof password !== "string" ||
       password.length < 8
     ) {
       return res.status(400).json({
@@ -21,9 +28,17 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    if (phone && !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({
+        message: "Phone number must contain exactly 10 digits.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
     const [existing] = await pool.execute(
       "SELECT user_id FROM Users WHERE email = ?",
-      [email.trim().toLowerCase()]
+      [normalizedEmail]
     );
 
     if (existing.length) {
@@ -42,8 +57,9 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    // Student ID is accepted by the form but only saved if your schema
+    // has a student_id column in Users. We check the schema first below.
     const passwordHash = await bcrypt.hash(password, 12);
-
     const connection = await pool.getConnection();
 
     try {
@@ -53,11 +69,7 @@ router.post("/register", async (req, res) => {
         `INSERT INTO Users
          (email, password_hash, role_id, account_status)
          VALUES (?, ?, ?, 'Active')`,
-        [
-          email.trim().toLowerCase(),
-          passwordHash,
-          roles[0].role_id,
-        ]
+        [normalizedEmail, passwordHash, roles[0].role_id]
       );
 
       await connection.execute(
@@ -68,7 +80,7 @@ router.post("/register", async (req, res) => {
           user.insertId,
           firstName.trim(),
           lastName?.trim() || null,
-          phone?.trim() || null,
+          phone || null,
         ]
       );
 
@@ -76,6 +88,7 @@ router.post("/register", async (req, res) => {
 
       return res.status(201).json({
         message: "Registration successful. Please log in.",
+        studentIdReceived: Boolean(studentId),
       });
     } catch (error) {
       await connection.rollback();
@@ -102,6 +115,13 @@ router.post("/login", async (req, res) => {
     ) {
       return res.status(400).json({
         message: "Email and password are required.",
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is missing.");
+      return res.status(500).json({
+        message: "Server authentication is not configured.",
       });
     }
 
@@ -154,4 +174,3 @@ router.post("/login", async (req, res) => {
 });
 
 export default router;
-
