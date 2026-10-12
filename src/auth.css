@@ -1,5 +1,5 @@
 
-/* Overall page */
+
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -11,7 +11,7 @@
   font-family: Arial, sans-serif;
 }
 
-/* Main card */
+
 .auth-card {
   width: 100%;
   max-width: 460px;
@@ -22,7 +22,7 @@
   box-sizing: border-box;
 }
 
-/* Headings */
+
 .auth-card h1 {
   margin: 0 0 10px;
   color: #243b68;
@@ -38,7 +38,7 @@
   line-height: 1.6;
 }
 
-/* Form labels */
+
 .auth-card label {
   display: block;
   margin: 18px 0 7px;
@@ -47,7 +47,7 @@
   font-weight: 600;
 }
 
-/* Form fields */
+
 .auth-card input,
 .auth-card select,
 .auth-card textarea {
@@ -76,7 +76,7 @@
   cursor: not-allowed;
 }
 
-/* Buttons */
+
 .auth-card button {
   width: 100%;
   margin-top: 22px;
@@ -109,7 +109,7 @@
   background: #cbd5e1;
 }
 
-/* Links */
+
 .auth-card a {
   color: #405ac7;
   font-weight: 600;
@@ -126,7 +126,7 @@
   font-size: 14px;
 }
 
-/* Error and success messages */
+
 .auth-error,
 .auth-success {
   margin: 16px 0;
@@ -147,7 +147,7 @@
   border: 1px solid #a7f3d0;
 }
 
-/* Settings sections */
+
 .settings-section {
   margin-top: 24px;
   padding: 16px;
@@ -160,7 +160,7 @@
   margin-top: 0;
 }
 
-/* Small screens */
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 23px;
